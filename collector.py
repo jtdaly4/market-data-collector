@@ -90,27 +90,31 @@ def main():
             latest["assets"].setdefault(sym, {})["close"] = c[4]
         time.sleep(0.15)  # polite pacing
 
+    def num(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return None
+
     for sym in uni["perps"]:
         pid = f"{sym}-PERP-INTX"
         p = get(f"{BROKERAGE}/{pid}")
         if not p or p.get("product_id") != pid:
             continue
-        def num(k):
-            v = p.get(k)
-            try:
-                return float(v)
-            except (TypeError, ValueError):
-                return None
-        mark, index = num("mid_market_price") or num("price"), num("index_price")
+        # funding/OI live nested under future_product_details.perpetual_details
+        perp = (p.get("future_product_details") or {}).get("perpetual_details") or {}
+        funding, oi = num(perp.get("funding_rate")), num(perp.get("open_interest"))
+        mark = num(p.get("mid_market_price")) or num(p.get("price"))
+        # endpoint exposes no index price; fresh spot ticker is the index proxy
+        t = get(f"{EXCHANGE}/products/{sym}-USD/ticker")
+        index = num((t or {}).get("price"))
         basis = ((mark - index) / index) if mark and index else None
         perp_rows.append({"ts": now, "product_id": pid,
-                          "funding_rate": num("funding_rate"),
-                          "open_interest": num("open_interest"),
+                          "funding_rate": funding, "open_interest": oi,
                           "mark_price": mark, "index_price": index,
                           "basis": round(basis, 8) if basis is not None else None})
         latest["assets"].setdefault(sym, {}).update(
-            funding_rate=num("funding_rate"), open_interest=num("open_interest"),
-            basis=basis)
+            funding_rate=funding, open_interest=oi, basis=basis)
         time.sleep(0.15)
 
     n_c = append_rows("candles", CANDLE_FIELDS, candle_rows, day)
