@@ -96,8 +96,12 @@ def main():
         except (TypeError, ValueError):
             return None
 
+    # INTX lists some low-priced perps per 1000 tokens: (contract base, scale)
+    perp_alias = {"PEPE": ("1000PEPE", 1000), "SHIB": ("1000SHIB", 1000)}
+
     for sym in uni["perps"]:
-        pid = f"{sym}-PERP-INTX"
+        base, scale = perp_alias.get(sym, (sym, 1))
+        pid = f"{base}-PERP-INTX"
         p = get(f"{BROKERAGE}/{pid}")
         if not p or p.get("product_id") != pid:
             continue
@@ -106,8 +110,10 @@ def main():
         funding, oi = num(perp.get("funding_rate")), num(perp.get("open_interest"))
         mark = num(p.get("mid_market_price")) or num(p.get("price"))
         # endpoint exposes no index price; fresh spot ticker is the index proxy
+        # (scaled into contract units for the 1000x products)
         t = get(f"{EXCHANGE}/products/{sym}-USD/ticker")
         index = num((t or {}).get("price"))
+        index = round(index * scale, 12) if index else None
         basis = ((mark - index) / index) if mark and index else None
         perp_rows.append({"ts": now, "product_id": pid,
                           "funding_rate": funding, "open_interest": oi,
