@@ -1,0 +1,10 @@
+{
+  "spot": ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK", "DOT",
+           "LTC", "BCH", "NEAR", "ATOM", "UNI", "APT", "ARB", "OP", "SUI",
+           "INJ", "AAVE", "ENA", "HBAR", "ONDO", "PAXG", "PEPE", "SHIB",
+           "XLM", "ZEC"],
+  "perps": ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK", "DOT",
+            "LTC", "BCH", "NEAR", "ATOM", "UNI", "APT", "ARB", "OP", "SUI",
+            "INJ", "AAVE", "ENA", "HBAR", "ONDO", "PEPE", "SHIB", "XLM", "ZEC"],
+  "_note": "spot -> {SYM}-USD candles; perps -> {SYM}-PERP-INTX snapshots (missing products skipped harmlessly). Keep in sync with regime_engine config.json universe."
+}
