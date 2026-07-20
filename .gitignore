@@ -1,0 +1,7 @@
+# Local build artifacts — the 1-minute archive is multi-GB, rebuilt from
+# backfill_minute.py; never commit the binary DB or its WAL sidecars.
+archive/
+*.db
+*.db-wal
+*.db-shm
+__pycache__/
