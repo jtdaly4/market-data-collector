@@ -37,6 +37,11 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 API = "https://api.exchange.coinbase.com"
 GRAN = 60
 WINDOW = 290 * GRAN   # seconds per request; 291 candles < Coinbase ~300 cap (no truncation)
+MAX_EMPTY_WINDOWS = 50  # consecutive empty/barren windows (~10 days) before we call it
+                        # end-of-history. Coinbase candles have gaps (exchange outages)
+                        # with real data on the far side — e.g. a ~6.5h hole on
+                        # 2026-05-08 that false-stopped the first run at 73 days.
+                        # Skip gaps; only a run this long is a genuine listing edge.
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS candles (
@@ -109,19 +114,26 @@ def main():
                        .replace(tzinfo=timezone.utc).timestamp())
 
     os.makedirs(os.path.dirname(os.path.abspath(args.db)), exist_ok=True)
-    con = sqlite3.connect(args.db)
+    con = sqlite3.connect(args.db, timeout=60)
+    # WAL: this archive is written by THIS backfill while the engine server
+    # serves /api/archive/* reads off it. In the default rollback-journal mode
+    # a reader blocks the writer and commit() dies with "database is locked"
+    # (which killed an earlier multi-hour run). WAL lets readers and the single
+    # writer coexist. busy_timeout makes any residual contention wait, not crash.
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=60000")
     con.executescript(SCHEMA)
 
     products = load_products(args.products)
     now = int(time.time()) // GRAN * GRAN
 
     # resume cursor per product = oldest bar we have, minus one step (or now if empty)
-    cursor, done, errors = {}, set(), {}
+    cursor, done, errors, empties = {}, set(), {}, {}
     for pid in products:
         mn = con.execute("SELECT MIN(ts) FROM candles WHERE product_id=? AND granularity=?",
                          (pid, GRAN)).fetchone()[0]
         cursor[pid] = (mn - GRAN) if mn is not None else now
-        errors[pid] = 0
+        errors[pid] = empties[pid] = 0
 
     print(f"archive: {os.path.abspath(args.db)}")
     print(f"{len(products)} products, granularity {GRAN}s, "
@@ -151,9 +163,19 @@ def main():
                 time.sleep(args.sleep)
                 continue
             errors[pid] = 0
-            if not rows:                           # empty = reached start of listing
-                done.add(pid)
-                print(f"  {pid}: reached start of history (~{day(cur)})")
+            if not rows:
+                # Empty window = a GAP in Coinbase's candles (exchange outage),
+                # NOT necessarily end-of-history — data resumes on the far side
+                # (verified: ~6.5h hole on 2026-05-08 with data both sides). Skip
+                # the window and keep walking back; only quit after a long run of
+                # consecutive empties (bigger than any real outage) or the floor.
+                empties[pid] += 1
+                if empties[pid] >= MAX_EMPTY_WINDOWS:
+                    done.add(pid)
+                    print(f"  {pid}: reached start of history (~{day(cur)}, "
+                          f"after {empties[pid]} empty windows)", flush=True)
+                    continue
+                cursor[pid] = start - GRAN         # step past the gap
                 time.sleep(args.sleep)
                 continue
             n = store(con, pid, rows)
@@ -161,9 +183,20 @@ def main():
             total_new += n
             round_new += n
             oldest = min(c[0] for c in rows)
-            if oldest >= cur:                      # no backward progress — stop this product
-                done.add(pid)
+            if oldest >= cur:
+                # Data came back but none of it is older than the cursor — this
+                # is a GAP BOUNDARY (the window returned only its top edge), not
+                # the end of history. Force-step past it exactly like an empty
+                # window; quitting here stopped 27/28 products after one request.
+                empties[pid] += 1
+                if empties[pid] >= MAX_EMPTY_WINDOWS:
+                    done.add(pid)
+                    print(f"  {pid}: reached start of history (~{day(cur)}, "
+                          f"after {empties[pid]} barren windows)", flush=True)
+                else:
+                    cursor[pid] = start - GRAN     # step past the gap
             else:
+                empties[pid] = 0
                 cursor[pid] = oldest - GRAN
             time.sleep(args.sleep)
             if args.max_requests and total_reqs >= args.max_requests:
