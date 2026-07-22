@@ -98,6 +98,28 @@ Products tracked are listed in `universe.json`. Spot adds PAXG (no perp).
 Perp coverage: BTC ETH SOL XRP DOGE ADA AVAX LINK DOT LTC BCH NEAR ATOM UNI APT
 ARB OP SUI INJ AAVE ENA HBAR ONDO XLM ZEC + 1000PEPE + 1000SHIB.
 
+## Hyperliquid / Moon Dev data (liquidations + wide funding)
+
+A separate, **key-authenticated** source lives under `data/hyperliquid/` and is
+populated by `grab_moondev_history.py` (a one-shot local pull — NOT the Actions
+job). It adds what Coinbase can't give: **liquidations** (multi-venue) and
+**funding+OI across Hyperliquid's wide universe**.
+
+| Table (via `import_to_sqlite.py`) | From | Notes |
+|---|---|---|
+| `hl_funding` | `data/hyperliquid/funding_history.csv` | `ts, coin, venue, funding_rate, funding_annualized, mark_price, open_interest, source` |
+| `liquidations` | `data/hyperliquid/liquidations_history.csv` | `ts, venue, coin, side, window, notional_usd, price, count, source` — **filter by `venue`** |
+
+Run it (on a machine with network + your key; the key is NEVER committed):
+```bash
+export MOONDEV_API_KEY=moonstream_xxxx     # or a .env file
+python3 grab_moondev_history.py            # probes reach, saves what your tier allows
+python3 import_to_sqlite.py /path/to/YOUR_PROJECT/market.db
+```
+Coverage depends on API tier — the script prints a per-endpoint report and writes
+`data/hyperliquid/_grab_report.json` telling you exactly what history was reachable.
+Same non-backfillable caveat as perp snapshots: a gap is permanent.
+
 ## Rules for multi-project use
 
 - **Each project builds its own `market.db` from the repo.** Never point two
