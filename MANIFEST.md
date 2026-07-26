@@ -56,7 +56,9 @@ observations missing since 2026-07-18) — and those are unrecoverable.
 ### Changeover timestamp
 - Perp timestamping changes from raw-`now` to hour-bucketed starting with the first
   `*/15` production run on/after this deploy.
-- **Exact first hour-aligned perp `ts`: _<recorded after first post-deploy run — see below>_**
+- **Exact first hour-aligned perp `ts`: `1785074400` (2026-07-26 14:00 UTC)** — the
+  first `*/15` run on the fixed code. Perp rows with `ts >= 1785074400` are hour-aligned;
+  earlier rows carry raw-`now` timestamps.
 - Rows with `ts % 3600 == 0` are post-fix (aligned). Pre-fix rows will (almost always)
   have `ts % 3600 != 0`.
 
