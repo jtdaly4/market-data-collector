@@ -76,18 +76,32 @@ def append_rows(kind, fields, rows, day):
 def main():
     uni = load_universe()
     now = int(time.time())
+    # Bucket perp snapshots to the top of the hour. The raw run time was stamped
+    # before, so the "hourly" series was not hour-aligned (runs land ~2.3h apart,
+    # never on :00). Downstream d5a treats perp_snapshots rows AS hourly (funding_z
+    # / oi_z windows, funding_streak_h). Bucketing + the (ts, product_id) PK make
+    # every run within an hour collapse to ONE aligned row => a genuinely hourly,
+    # gap-free series once the cron fires several times per hour (see */15).
+    perp_ts = now - (now % 3600)
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     candle_rows, perp_rows, latest = [], [], {"generated_at": now, "assets": {}}
 
     for sym in uni["spot"]:
         pid = f"{sym}-USD"
-        # last complete hourly candle (request 2, take the older = closed one)
+        # Keep the last 48 CLOSED hourly candles each run, not just one. The API
+        # returns ~350 bars (verified); dropping only the in-progress newest bar
+        # makes the hourly job SELF-HEALING across dropped/late cron runs — GitHub
+        # schedule is best-effort (observed gaps median 2.3h, max 4.5h), and a
+        # 1-bar window lost every hour between runs. 48h covers the worst outage
+        # 10x. CSV dedup + INSERT OR IGNORE absorb the overlap for free; deep
+        # holes are replay.py backfill's job, not this hourly job's.
         data = get(f"{EXCHANGE}/products/{pid}/candles?granularity=3600")
         if data and len(data) >= 2:
-            c = sorted(data, key=lambda x: x[0])[-2]  # newest-first API; -2 = closed hour
-            candle_rows.append(dict(zip(CANDLE_FIELDS,
-                                        [c[0], pid, c[3], c[2], c[1], c[4], c[5]])))
-            latest["assets"].setdefault(sym, {})["close"] = c[4]
+            closed = sorted(data, key=lambda x: x[0])[-49:-1]  # drop newest = in-progress
+            for c in closed:
+                candle_rows.append(dict(zip(CANDLE_FIELDS,
+                                            [c[0], pid, c[3], c[2], c[1], c[4], c[5]])))
+            latest["assets"].setdefault(sym, {})["close"] = closed[-1][4]  # newest closed
         time.sleep(0.15)  # polite pacing
 
     def num(v):
@@ -115,7 +129,7 @@ def main():
         index = num((t or {}).get("price"))
         index = round(index * scale, 12) if index else None
         basis = ((mark - index) / index) if mark and index else None
-        perp_rows.append({"ts": now, "product_id": pid,
+        perp_rows.append({"ts": perp_ts, "product_id": pid,
                           "funding_rate": funding, "open_interest": oi,
                           "mark_price": mark, "index_price": index,
                           "basis": round(basis, 8) if basis is not None else None})
@@ -123,7 +137,15 @@ def main():
             funding_rate=funding, open_interest=oi, basis=basis)
         time.sleep(0.15)
 
-    n_c = append_rows("candles", CANDLE_FIELDS, candle_rows, day)
+    # The 48-candle window can straddle a UTC midnight, so route each candle to
+    # its own day-file — otherwise yesterday's bars land in today's file and dodge
+    # that file's (ts, product_id) dedup. Perp rows are all in the current hour.
+    n_c = 0
+    by_day = {}
+    for row in candle_rows:
+        by_day.setdefault(time.strftime("%Y-%m-%d", time.gmtime(int(row["ts"]))), []).append(row)
+    for d, rows in by_day.items():
+        n_c += append_rows("candles", CANDLE_FIELDS, rows, d)
     n_p = append_rows("perp", PERP_FIELDS, perp_rows, day)
     with open(os.path.join(BASE, "data", "latest.json"), "w") as f:
         json.dump(latest, f, indent=1)
