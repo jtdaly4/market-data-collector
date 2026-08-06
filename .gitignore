@@ -5,3 +5,7 @@ archive/
 *.db-wal
 *.db-shm
 __pycache__/
+
+# pressure collector runtime logs
+pressure.out.log
+pressure.err.log
