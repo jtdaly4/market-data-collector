@@ -20,7 +20,7 @@ NOTE: run from a US IP, Binance (api.binance.com / fapi.binance.com) returns 451
 OI/positioning fall back to OKX (source-stamped). Run from a non-US IP to capture
 the Binance ingredients the original ThermoSat card uses.
 """
-import json, os, sqlite3, time, urllib.request, urllib.error
+import json, os, sqlite3, sys, time, urllib.request, urllib.error
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE, "pressure_snapshots.db")
@@ -149,10 +149,28 @@ def main():
                     "VALUES (?,?,?,?)", (ts, oi, short, src))
     con.commit(); con.close()
 
+    # Diagnostic line only — the DB write above is the payload and has already
+    # landed. Guard the flush: the Claude Desktop VM intermittently throws
+    # EDEADLK ("Resource deadlock avoided") on stdout flush, which must never
+    # dirty the exit code or imply the capture failed.
     import datetime
     stamp = datetime.datetime.fromtimestamp(ts, datetime.timezone.utc)
-    print(f"[{stamp:%Y-%m-%d %H:00} UTC] depth: {got}  | oi={oi} short={short} src={src}")
+    line = f"[{stamp:%Y-%m-%d %H:00} UTC] depth: {got}  | oi={oi} short={short} src={src}"
+    for _ in range(3):
+        try:
+            sys.stdout.write(line + "\n"); sys.stdout.flush(); break
+        except OSError:
+            time.sleep(0.3)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except OSError:
+        pass  # VM-induced EDEADLK on a flush must not fail the hour's run
+    # Swallow the interpreter's final implicit stdout flush too (same EDEADLK).
+    try:
+        sys.stdout.flush()
+    except OSError:
+        try: os.close(sys.stdout.fileno())
+        except Exception: pass
