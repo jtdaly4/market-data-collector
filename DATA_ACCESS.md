@@ -98,6 +98,49 @@ Products tracked are listed in `universe.json`. Spot adds PAXG (no perp).
 Perp coverage: BTC ETH SOL XRP DOGE ADA AVAX LINK DOT LTC BCH NEAR ATOM UNI APT
 ARB OP SUI INJ AAVE ENA HBAR ONDO XLM ZEC + 1000PEPE + 1000SHIB.
 
+## Hyperliquid / Moon Dev data (liquidations + wide funding)
+
+A separate, **key-authenticated** source lives under `data/hyperliquid/` and is
+populated by `grab_moondev_history.py` (a one-shot local pull — NOT the Actions
+job). It adds what Coinbase can't give: **liquidations** (multi-venue) and
+**funding+OI across Hyperliquid's wide universe**.
+
+| Table (via `import_to_sqlite.py`) | From | Notes |
+|---|---|---|
+| `hl_funding` | `data/hyperliquid/funding_history.csv` | `ts, coin, venue, funding_rate, funding_annualized, mark_price, open_interest, source` |
+| `liquidations` | `data/hyperliquid/liquidations_history.csv` | `ts, venue, coin, side, window, notional_usd, price, count, source` — **filter by `venue`** |
+
+Run it (on a machine with network + your key; the key is NEVER committed):
+```bash
+export MOONDEV_API_KEY=moonstream_xxxx     # or a .env file
+python3 grab_moondev_history.py            # probes reach, saves what your tier allows
+python3 import_to_sqlite.py /path/to/YOUR_PROJECT/market.db
+```
+Coverage depends on API tier — the script prints a per-endpoint report and writes
+`data/hyperliquid/_grab_report.json` telling you exactly what history was reachable.
+
+**Funding history backlog** — Moon Dev's standard tier serves funding as a LIVE
+SNAPSHOT only (no history endpoints). For the actual backlog, `backfill_funding.py`
+pulls per-coin funding history from FREE public venue APIs (Binance USDⓈ-M,
+Hyperliquid) into the same `hl_funding` table (keyed by ts+coin+**venue**, so
+venues coexist and the engine can pick). No API key:
+```bash
+python3 backfill_funding.py                    # both venues, universe, since 2020
+python3 import_to_sqlite.py /path/to/YOUR_PROJECT/market.db
+```
+Caveat: venue funding correlates with, but is not identical to, Coinbase-INTX
+funding; historical OI is not available. Live/forward Coinbase funding still comes
+from the hourly `data/perp/*.csv` collector.
+
+**Committed backlog CSVs** (`data/hyperliquid/funding_<venue>.csv`, one per venue —
+the importer globs `funding*.csv`, so they coexist in `hl_funding`):
+- `funding_binance.csv` — Binance USDⓈ-M, ~8h cadence, since 2020. **Captured
+  from outside the US:** the collector's US IP gets `451` from Binance, so this
+  series is **NOT re-fetchable from the normal collector** — it is committed here
+  precisely because it can't be regenerated at home. Treat as a proxy.
+- `funding_hyperliquid.csv` — Hyperliquid, hourly, since ~2023. Keyless and
+  re-fetchable from anywhere (`python3 backfill_funding.py --venues hyperliquid`).
+
 ## Rules for multi-project use
 
 - **Each project builds its own `market.db` from the repo.** Never point two
