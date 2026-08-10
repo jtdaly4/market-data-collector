@@ -130,6 +130,19 @@ NOTIONAL_KEYS = ("notional_usd", "notional", "usd", "value", "amount", "sz", "si
 COUNT_KEYS = ("count", "n", "num", "trades")
 
 
+def _base_sym(c) -> str:
+    """Normalize a coin ticker to its base for universe matching:
+    strip a leading '1000' or 'k'/'K' size-prefix. 1000PEPE/kPEPE -> PEPE."""
+    if not c:
+        return ""
+    s = str(c).upper()
+    if s.startswith("1000"):
+        s = s[4:]
+    elif s.startswith("K") and len(s) > 1 and s[1:].isalpha():
+        s = s[1:]
+    return s
+
+
 def _first(d: dict, keys) -> object:
     for k in keys:
         if k in d and d[k] not in (None, ""):
@@ -422,6 +435,17 @@ def run(http: Http, args) -> list[dict]:
     written = []
     funding_rows = [r for r in funding_rows if r["ts"] and r["coin"]]
     liq_rows = [r for r in liq_rows if r["ts"]]
+
+    # Scope to the repo universe (28 tickers) unless --all-coins. Rows with no
+    # coin (e.g. market-wide liquidation totals) are always kept.
+    if not args.all_coins:
+        keep = {_base_sym(s) for s in _universe_coins()}
+        before_f, before_l = len(funding_rows), len(liq_rows)
+        funding_rows = [r for r in funding_rows if _base_sym(r["coin"]) in keep]
+        liq_rows = [r for r in liq_rows if not r["coin"] or _base_sym(r["coin"]) in keep]
+        print(f"scoped to universe ({len(keep)} tickers): "
+              f"funding {before_f}->{len(funding_rows)}, liq {before_l}->{len(liq_rows)} rows "
+              f"(use --all-coins to keep everything)")
     if funding_rows:
         p = write_csv("funding_history.csv", FUNDING_COLS, funding_rows,
                       {**meta_common, "source": "funding endpoints (see 'source' column)"})
@@ -517,6 +541,8 @@ def main():
     ap.add_argument("--max-pages", type=int, default=200, help="pagination page cap per endpoint")
     ap.add_argument("--max-windows", type=int, default=200, help="date-walk window cap per endpoint")
     ap.add_argument("--no-date-probe", action="store_true", help="skip date-range probing")
+    ap.add_argument("--all-coins", action="store_true",
+                    help="keep every coin the API returns (default: scope to universe.json's 28)")
     ap.add_argument("--commit", action="store_true", help="git add+commit the results")
     args = ap.parse_args()
 
