@@ -118,7 +118,19 @@ python3 import_to_sqlite.py /path/to/YOUR_PROJECT/market.db
 ```
 Coverage depends on API tier — the script prints a per-endpoint report and writes
 `data/hyperliquid/_grab_report.json` telling you exactly what history was reachable.
-Same non-backfillable caveat as perp snapshots: a gap is permanent.
+
+**Funding history backlog** — Moon Dev's standard tier serves funding as a LIVE
+SNAPSHOT only (no history endpoints). For the actual backlog, `backfill_funding.py`
+pulls per-coin funding history from FREE public venue APIs (Binance USDⓈ-M,
+Hyperliquid) into the same `hl_funding` table (keyed by ts+coin+**venue**, so
+venues coexist and the engine can pick). No API key:
+```bash
+python3 backfill_funding.py                    # both venues, universe, since 2020
+python3 import_to_sqlite.py /path/to/YOUR_PROJECT/market.db
+```
+Caveat: venue funding correlates with, but is not identical to, Coinbase-INTX
+funding; historical OI is not available. Live/forward Coinbase funding still comes
+from the hourly `data/perp/*.csv` collector.
 
 ## Rules for multi-project use
 
