@@ -9,3 +9,15 @@ __pycache__/
 # pressure collector runtime logs
 pressure.out.log
 pressure.err.log
+
+# INTX bulk CSVs are archive-scale — keep the metadata (horizon/manifest),
+# never the multi-hundred-MB CSVs. Bulk lives in archive/ (already ignored).
+data/coinbase/*.csv
+data/coinbase/candles_intx/*.csv
+
+# Internal architect/coordination docs — this repo is PUBLIC. Keep the wire
+# (orders, design memos) and retired local scripts out of it.
+DAEDALUS_ORDERS_*.md
+CLOUD_COLLECTION_DESIGN.md
+fetch_intx_funding.py
+data/coinbase_intx_pull.log

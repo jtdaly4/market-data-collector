@@ -137,9 +137,39 @@ the importer globs `funding*.csv`, so they coexist in `hl_funding`):
 - `funding_binance.csv` — Binance USDⓈ-M, ~8h cadence, since 2020. **Captured
   from outside the US:** the collector's US IP gets `451` from Binance, so this
   series is **NOT re-fetchable from the normal collector** — it is committed here
-  precisely because it can't be regenerated at home. Treat as a proxy.
+  precisely because it can't be regenerated at home.
 - `funding_hyperliquid.csv` — Hyperliquid, hourly, since ~2023. Keyless and
   re-fetchable from anywhere (`python3 backfill_funding.py --venues hyperliquid`).
+
+> **REFERENCE ONLY — NEVER A COST INPUT** (Daedalus ruling 2026-08-10). We trade
+> Coinbase INTX; our funding cost is Coinbase's rate on Coinbase's contracts. A
+> Binance/HL rate is a *different venue on different instruments* — **no venue-proxy
+> number enters any net-of-cost restatement or receipt.** These series are for
+> **regime characterization** only: they reach back to 2020 (5.5y × 28 coins),
+> which answers what our own venue cannot — has the funding regime compressed
+> across cycles — and they break the 168-hour period ceiling (monthly/quarterly
+> funding cycles). Coinbase-INTX authoritative funding is the real cost input —
+> see the INTX archive below.
+
+## Coinbase-INTX archive — the AUTHORITATIVE funding + 15-min candles
+
+Captured 2026-08-10/11 from the Coinbase **International** endpoint
+(`api.international.coinbase.com`, public/keyless) while abroad — it is IP
+geo-blocked from the US, so this is a **one-shot, non-refetchable** grab. This is
+our own venue's funding on our own contracts: **use it for cost**, not the
+Binance/HL proxies. Recipes: `scripts/intx_funding_pull.py`, `scripts/intx_candles_pull.py`.
+
+| what | metadata (git) | bulk (local `archive/`, gitignored) |
+|---|---|---|
+| funding, 264 perps, 2.88M rows | `data/coinbase/funding_intx_horizon.json` | `archive/coinbase_intx/funding_intx.csv` |
+| 15-min candles, 151 perps w/ data, 5.78M bars | `data/coinbase/candles_intx/_manifest.json` | `archive/coinbase_intx/candles_intx/{SYM}_FIFTEEN_MINUTE.csv` |
+
+- **Horizon:** BTC/ETH funding to **2023-03-22** (candles to 2023-08-30); equity
+  perps (NVDA/AAPL/TSLA/SPY/QQQ) from 2026-03-20; GOLD/SILVER 2026-04-22;
+  OPENAI/ANTHROPIC 2026-06-22; COIN50 2024-11-12. Per-instrument in the horizon/manifest.
+- **Frozen at capture; does not update. Never extend silently.** Honest gaps, no
+  interpolation. Bulk stays in `archive/` (**outside iCloud** — irreplaceable data
+  never lands in a sync-managed dir).
 
 ## Rules for multi-project use
 
