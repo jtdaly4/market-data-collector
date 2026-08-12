@@ -123,11 +123,16 @@ def main():
         perp = (p.get("future_product_details") or {}).get("perpetual_details") or {}
         funding, oi = num(perp.get("funding_rate")), num(perp.get("open_interest"))
         mark = num(p.get("mid_market_price")) or num(p.get("price"))
-        # endpoint exposes no index price; fresh spot ticker is the index proxy
-        # (scaled into contract units for the 1000x products)
-        t = get(f"{EXCHANGE}/products/{sym}-USD/ticker")
-        index = num((t or {}).get("price"))
-        index = round(index * scale, 12) if index else None
+        # Prefer the venue's own index (future_product_details.index_price, already
+        # in contract units). Fall back to the {sym}-USD spot ticker as a proxy,
+        # scaled ×1000 for the 1000x products, only when index_price is absent.
+        # COIN50 has no COIN50-USD spot, so index_price is its ONLY source — the
+        # old spot-only path left COIN50 index/basis null forever (fixed 2026-08-12).
+        index = num((p.get("future_product_details") or {}).get("index_price"))
+        if index is None:
+            t = get(f"{EXCHANGE}/products/{sym}-USD/ticker")
+            index = num((t or {}).get("price"))
+            index = round(index * scale, 12) if index else None
         basis = ((mark - index) / index) if mark and index else None
         perp_rows.append({"ts": perp_ts, "product_id": pid,
                           "funding_rate": funding, "open_interest": oi,
