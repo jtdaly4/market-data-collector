@@ -23,7 +23,11 @@ the Binance ingredients the original ThermoSat card uses.
 import json, os, sqlite3, sys, time, urllib.request, urllib.error
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DB = os.path.join(BASE, "pressure_snapshots.db")
+# CANONICAL PRESSURE PATH (declared 2026-08-14 per Daedalus 13c §2). Depth cannot
+# be re-fetched, so it lives in the durable archive/ path — outside iCloud, never
+# in runtime state that a house-move can orphan. Downstream instruments read HERE.
+DB = os.path.join(BASE, "archive", "pressure_snapshots.db")
+os.makedirs(os.path.dirname(DB), exist_ok=True)
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS satio_snapshots(
   ts INTEGER NOT NULL, venue TEXT NOT NULL, depth_1pct_btc REAL,
