@@ -5,7 +5,19 @@ Market data collector — runs on GitHub Actions (hourly cron).
 Collects, per asset in universe.json:
   - spot hourly candle (last complete hour) from Coinbase Exchange public API
   - perp snapshot (funding_rate, open_interest, mark, index -> basis) from
-    Coinbase Advanced public market endpoint, where a -PERP-INTX product exists
+    Deribit's public API, for the <BASE>-PERP-INTX ids our ledger already uses
+
+VENUE MIGRATION, 2026-10-02 (ORDER 097). Coinbase migrated International
+Exchange (INTX) onto Deribit's matching engine on 2026-10-01 09:00Z. The old
+INTX-backed brokerage endpoint kept answering with its LAST value forever
+after that (a dead feed that returns a number looks like a quiet market —
+market.db.perp_snapshots carried the identical row for BTC-PERP-INTX etc.
+every hour from 09:00Z on). Deribit is the new venue; its public ticker +
+funding-history methods replace the old Coinbase Advanced perpetuals call.
+Instrument names are discovered at runtime via public/get_instruments (never
+hardcoded — Deribit's own roster changes), then mapped back to our internal
+<BASE>-PERP-INTX ids so the ledger stays continuous across the cutover. See
+00_command/INTX_TO_DERIBIT_MIGRATION_2026-10-01.md for the full writeup.
 
 Appends to daily CSVs (data/candles/YYYY-MM-DD.csv, data/perp/YYYY-MM-DD.csv)
 and rewrites data/latest.json. Idempotent per (ts, product): safe to re-run.
@@ -25,11 +37,13 @@ import urllib.request
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 EXCHANGE = "https://api.exchange.coinbase.com"
-BROKERAGE = "https://api.coinbase.com/api/v3/brokerage/market/products"
+DERIBIT = "https://www.deribit.com/api/v2"
 
 CANDLE_FIELDS = ["ts", "product_id", "open", "high", "low", "close", "volume"]
+# source + mark_age_s added 2026-10-02 (ORDER 097): the venue's own quote age,
+# so a stale mark is visible in the data itself, not just inferred from outside.
 PERP_FIELDS = ["ts", "product_id", "funding_rate", "open_interest",
-               "mark_price", "index_price", "basis"]
+               "mark_price", "index_price", "basis", "source", "mark_age_s"]
 
 
 def get(url, timeout=15, retries=2):
@@ -110,37 +124,69 @@ def main():
         except (TypeError, ValueError):
             return None
 
-    # INTX lists some low-priced perps per 1000 tokens: (contract base, scale)
-    perp_alias = {"PEPE": ("1000PEPE", 1000), "SHIB": ("1000SHIB", 1000)}
+    def deribit_get(path):
+        d = get(f"{DERIBIT}{path}")
+        return (d or {}).get("result")
 
+    # Deribit keeps the same 1000x-denominated contracts INTX used, under the
+    # same alias convention (its own price_index is "1000pepe_usdc" etc., so
+    # the ticker's index/mark are already in contract units — no manual ×1000
+    # rescale needed here, unlike the old INTX spot-ticker fallback above).
+    perp_alias = {"PEPE": "1000PEPE", "SHIB": "1000SHIB"}
+
+    # Discover the live perpetual roster ONCE per run (never hardcoded: Deribit
+    # adds/removes instruments on its own schedule). One call, not one per
+    # product, to respect the 1 req/s get_instruments limit.
+    instruments = deribit_get("/public/get_instruments?currency=USDC&kind=future&expired=false") or []
+    deribit_by_base = {
+        i["instrument_name"].split("_USDC-PERPETUAL")[0]: i["instrument_name"]
+        for i in instruments if i.get("settlement_period") == "perpetual"
+    }
+    time.sleep(1.0)  # get_instruments is rate-limited to 1 req/s; let it clear
+
+    perp_fetch_ages = []
     for sym in uni["perps"]:
-        base, scale = perp_alias.get(sym, (sym, 1))
-        pid = f"{base}-PERP-INTX"
-        p = get(f"{BROKERAGE}/{pid}")
-        if not p or p.get("product_id") != pid:
+        base = perp_alias.get(sym, sym)
+        pid = f"{base}-PERP-INTX"  # internal id unchanged -- ledger stays continuous
+        name = deribit_by_base.get(base)
+        if not name:
+            continue  # not live on Deribit under this base -- UNMEASURED, not zero
+        t = deribit_get(f"/public/ticker?instrument_name={name}")
+        if not t:
             continue
-        # funding/OI live nested under future_product_details.perpetual_details
-        perp = (p.get("future_product_details") or {}).get("perpetual_details") or {}
-        funding, oi = num(perp.get("funding_rate")), num(perp.get("open_interest"))
-        mark = num(p.get("mid_market_price")) or num(p.get("price"))
-        # Prefer the venue's own index (future_product_details.index_price, already
-        # in contract units). Fall back to the {sym}-USD spot ticker as a proxy,
-        # scaled ×1000 for the 1000x products, only when index_price is absent.
-        # COIN50 has no COIN50-USD spot, so index_price is its ONLY source — the
-        # old spot-only path left COIN50 index/basis null forever (fixed 2026-08-12).
-        index = num((p.get("future_product_details") or {}).get("index_price"))
-        if index is None:
-            t = get(f"{EXCHANGE}/products/{sym}-USD/ticker")
-            index = num((t or {}).get("price"))
-            index = round(index * scale, 12) if index else None
+        mark, index, oi = num(t.get("mark_price")), num(t.get("index_price")), num(t.get("open_interest"))
+        quote_ts_ms = t.get("timestamp")
+        mark_age_s = round(time.time() - quote_ts_ms / 1000.0, 3) if quote_ts_ms else None
+        time.sleep(0.2)
+
+        # Hourly-equivalent funding, matching INTX's hourly print: Deribit's
+        # funding is continuous, but get_funding_rate_history's interest_1h is
+        # the venue's own realized rate for the hour ENDING at its timestamp.
+        # Ask for the hour ending at perp_ts (the most recently closed one as
+        # of this run) and read that row directly -- no re-derivation.
+        hist = deribit_get(f"/public/get_funding_rate_history?instrument_name={name}"
+                            f"&start_timestamp={(perp_ts - 3600) * 1000}&end_timestamp={perp_ts * 1000}")
+        funding = None
+        if hist:
+            row = min(hist, key=lambda r: abs(r.get("timestamp", 0) - perp_ts * 1000))
+            funding = num(row.get("interest_1h"))
         basis = ((mark - index) / index) if mark and index else None
+        if mark_age_s is not None:
+            perp_fetch_ages.append(mark_age_s)
         perp_rows.append({"ts": perp_ts, "product_id": pid,
                           "funding_rate": funding, "open_interest": oi,
                           "mark_price": mark, "index_price": index,
-                          "basis": round(basis, 8) if basis is not None else None})
+                          "basis": round(basis, 8) if basis is not None else None,
+                          "source": "deribit", "mark_age_s": mark_age_s})
         latest["assets"].setdefault(sym, {}).update(
             funding_rate=funding, open_interest=oi, basis=basis)
-        time.sleep(0.15)
+        time.sleep(0.2)
+
+    # Health lines: this feed's venue and the staleness of its worst quote,
+    # visible in the published status itself (ORDER 097 item 4), not just
+    # inferable from silence the way the INTX freeze was.
+    latest["perp_feed_source"] = "deribit" if perp_rows else "unmeasured_no_rows_this_run"
+    latest["perp_mark_age_s"] = round(max(perp_fetch_ages), 3) if perp_fetch_ages else None
 
     # The 48-candle window can straddle a UTC midnight, so route each candle to
     # its own day-file — otherwise yesterday's bars land in today's file and dodge

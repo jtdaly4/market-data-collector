@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS candles (
 CREATE TABLE IF NOT EXISTS perp_snapshots (
   ts INTEGER NOT NULL, product_id TEXT NOT NULL,
   funding_rate REAL, open_interest REAL, mark_price REAL, index_price REAL, basis REAL,
+  source TEXT, mark_age_s REAL,
   PRIMARY KEY (ts, product_id));
 -- Hyperliquid / Moon Dev history (from grab_moondev_history.py, data/hyperliquid/*.csv).
 -- Point-in-time; venue kept explicit since liquidations span multiple exchanges.
@@ -79,9 +80,15 @@ def main():
           f(r["low"]), f(r["close"]), f(r["volume"])) for r in rows("candles/*.csv")]
     ).rowcount
     m = con.executemany(
-        "INSERT OR IGNORE INTO perp_snapshots VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO perp_snapshots VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [(int(r["ts"]), r["product_id"], f(r["funding_rate"]), f(r["open_interest"]),
-          f(r["mark_price"]), f(r["index_price"]), f(r["basis"])) for r in rows("perp/*.csv")]
+          f(r["mark_price"]), f(r["index_price"]), f(r["basis"]),
+          # pre-2026-10-02 CSV rows carry no source/mark_age_s column at all;
+          # every one of those was coinbase_intx (the only venue that existed
+          # then) -- a known fact, not a guess. mark_age_s is genuinely unknown
+          # for them (never measured at write time), so it stays UNMEASURED.
+          r.get("source") or "coinbase_intx", f(r.get("mark_age_s")))
+         for r in rows("perp/*.csv")]
     ).rowcount
 
     # Hyperliquid / Moon Dev history (present only after grab_moondev_history.py runs).
