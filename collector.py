@@ -72,6 +72,22 @@ def append_rows(kind, fields, rows, day):
     exists = os.path.exists(path)
     if exists:
         with open(path, newline="") as f:
+            header = next(csv.reader(f), [])
+        # A field list that grows mid-day (ORDER 097 added source/mark_age_s)
+        # leaves the OLD, shorter header on an already-existing file, since a
+        # header is only written once. csv.DictReader then keys the new
+        # columns on every later row under the restkey, not their field name
+        # -- a reader asking for row["source"] silently gets None forever
+        # (found 2026-10-02: new deribit rows landed in market.db tagged
+        # coinbase_intx). If the old header is a prefix of the new fields,
+        # the data is positionally fine -- only the header line is stale.
+        if header and header != fields and fields[:len(header)] == header:
+            with open(path, newline="") as f:
+                lines = f.readlines()
+            lines[0] = ",".join(fields) + "\r\n"
+            with open(path, "w", newline="") as f:
+                f.writelines(lines)
+        with open(path, newline="") as f:
             for row in csv.DictReader(f):
                 seen.add((row["ts"], row["product_id"]))
     wrote = 0
