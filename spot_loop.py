@@ -49,8 +49,7 @@ import time
 import urllib.request
 
 EXCHANGE = "https://api.exchange.coinbase.com"
-UNIVERSE_PATH = os.path.expanduser(
-    "~/CoinLandRepos/market-data-collector/universe.json")
+UNIVERSE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.json")
 FEEDS_DIR = os.path.expanduser("~/RegimeData/feeds")
 DB = os.path.expanduser("~/RegimeData/market.db")
 GRANULARITY = 3600

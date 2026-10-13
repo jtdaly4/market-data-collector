@@ -84,8 +84,7 @@ import time
 import urllib.request
 
 DERIBIT = "https://www.deribit.com/api/v2"
-UNIVERSE_PATH = os.path.expanduser(
-    "~/CoinLandRepos/market-data-collector/universe.json")
+UNIVERSE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "universe.json")
 FEEDS_DIR = os.path.expanduser("~/RegimeData/feeds")
 REALIZED_CACHE_PATH = os.path.join(FEEDS_DIR, "_funding_realized_cache.json")
 

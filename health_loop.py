@@ -35,8 +35,9 @@ import time
 
 FEEDS_DIR = os.path.expanduser("~/RegimeData/feeds")
 DB = os.path.expanduser("~/RegimeData/market.db")
-ARCHIVE_MANIFEST = os.path.expanduser(
-    "~/CoinLandRepos/market-data-collector/archive/coinbase_intx/candles_intx/_manifest.json")
+ARCHIVE_MANIFEST = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "archive", "coinbase_intx",
+    "candles_intx", "_manifest.json")
 HEALTH_PATH = os.path.join(FEEDS_DIR, "health.json")
 
 
