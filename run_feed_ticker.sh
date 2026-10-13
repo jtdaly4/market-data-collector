@@ -46,7 +46,7 @@ if ! mkdir "$LOCK" 2>/dev/null; then
   fi
 fi
 echo $$ > "$LOCK/pid"
-trap 'rm -rf "$LOCK"' EXIT INT TERM
+trap 'rm -rf "$LOCK"; exit 0' EXIT INT TERM
 
 echo "=== $(date -u +%Y-%m-%dT%H:%M:%SZ) ticker loop up, period ${PERIOD}s, pid $$ ===" >> "$LOG"
 
