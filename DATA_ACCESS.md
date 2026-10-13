@@ -140,6 +140,14 @@ the importer globs `funding*.csv`, so they coexist in `hl_funding`):
   precisely because it can't be regenerated at home.
 - `funding_hyperliquid.csv` — Hyperliquid, hourly, since ~2023. Keyless and
   re-fetchable from anywhere (`python3 backfill_funding.py --venues hyperliquid`).
+  **CORRECTION 2026-10-09 by COLLECTOR, measured:** this file does not exist on
+  disk (`data/hyperliquid/` holds only `funding_binance.csv` + README.md) and has
+  no commit in this repo's history under either name. `market.db.hl_funding` is
+  currently 100% `venue='binance'` (166,877/166,877 rows) — the Hyperliquid half
+  of this table has never actually been populated, despite being documented here
+  as committed. Re-running `backfill_funding.py --venues hyperliquid` then
+  `import_to_sqlite.py` would close this; not done here (ORDER 113 is read-only
+  inventory for part 1, no changes).
 
 > **REFERENCE ONLY — NEVER A COST INPUT** (Daedalus ruling 2026-08-10). We trade
 > Coinbase INTX; our funding cost is Coinbase's rate on Coinbase's contracts. A
