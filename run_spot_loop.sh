@@ -9,7 +9,7 @@
 # specified 60s there). Pacing against the wall clock inside a long-lived
 # loop keeps the period correct (300s) regardless of sweep duration.
 set -u
-TOOLS="/Users/jamesdaly4/CoinLandRepos/market-data-collector"
+TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$TOOLS/logs_spot_loop.log"
 PERIOD=300
 PY=/opt/homebrew/bin/python3

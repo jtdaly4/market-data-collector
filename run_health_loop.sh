@@ -6,7 +6,7 @@
 # on a one-shot script already proved itself wrong once (ORDER 103 part 1's
 # measured 82s-vs-60s).
 set -u
-TOOLS="/Users/jamesdaly4/CoinLandRepos/market-data-collector"
+TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$TOOLS/logs_health_loop.log"
 PERIOD=60
 PY=/opt/homebrew/bin/python3

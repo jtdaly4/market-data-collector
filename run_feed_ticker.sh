@@ -20,7 +20,7 @@
 # 60 s the loop skips to the next boundary rather than queueing up behind itself,
 # and says so in the log. Cadence is then independent of venue latency.
 set -u
-TOOLS="/Users/jamesdaly4/CoinLandRepos/market-data-collector"
+TOOLS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$TOOLS/logs_feed_ticker.log"
 PERIOD=60
 PY=/opt/homebrew/bin/python3
