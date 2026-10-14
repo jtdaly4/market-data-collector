@@ -21,3 +21,11 @@ DAEDALUS_ORDERS_*.md
 CLOUD_COLLECTION_DESIGN.md
 fetch_intx_funding.py
 data/coinbase_intx_pull.log
+
+# ORDER 104 part 2: Mac -> London mirror push. london_push.conf names the
+# London host/path; keep infra topology out of a public repo even though it
+# isn't a credential.
+scripts/london_push.conf
+.london_push_state/
+logs_london_push.log
+london_push.launchd.*.log
