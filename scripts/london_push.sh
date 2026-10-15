@@ -23,6 +23,13 @@ LOG="$TOOLS/logs_london_push.log"
 STATE_DIR="$TOOLS/.london_push_state"
 PERIOD=60
 CONF="$TOOLS/scripts/london_push.conf"
+# ORDER 104 part 2 repair, 2026-10-15: ORDER 115's own backups land at 00:10Z
+# (market.db) and ~00:21Z (funding) each day. push_dbs used to fire at the
+# first loop iteration after 00:00Z, before either existed, so `ls -t | head
+# -1` picked up YESTERDAY's backup (still the newest file on disk at that
+# moment) and marked the day done — the mirror silently lagged by up to two
+# days. Gated below so the leg can't fire before both are certain to exist.
+DB_PUSH_AFTER_HHMM="0045"
 
 mkdir -p "$STATE_DIR"
 # shellcheck disable=SC1090
@@ -74,24 +81,62 @@ push_archive() {
   fi
 }
 
+push_db_file() {
+  local label="$1" src="$2" dst="$3"
+  local src_name src_size rc remote_size
+  src_name=$(basename "$src")
+  src_size=$(stat -f%z "$src" 2>/dev/null)
+  do_rsync "$label" "$src" "$dst"
+  rc=$?
+  log "$label source=$src_name source_bytes=${src_size:-UNMEASURED}"
+  if [ "$rc" -eq 0 ]; then
+    remote_size=$($RSYNC_SSH "$LONDON_HOST" "stat -c%s '$dst'" 2>/dev/null)
+    if [ -n "$remote_size" ] && [ "$remote_size" = "$src_size" ]; then
+      log "$label VERIFY ok bytes=$remote_size"
+    else
+      log "$label VERIFY MISMATCH local=${src_size:-UNMEASURED} remote=${remote_size:-UNMEASURED}"
+      rc=1
+    fi
+  fi
+  return "$rc"
+}
+
 push_dbs() {
-  local cur_day marker
+  local cur_day now_hm marker
   cur_day=$(date -u +%Y%m%d)
   marker="$STATE_DIR/last_db_day"
   if [ -f "$marker" ] && [ "$(cat "$marker")" = "$cur_day" ]; then
     return 0
   fi
+  # Both of today's backups must exist before this leg trusts "newest" to mean
+  # "today's" — see DB_PUSH_AFTER_HHMM above. now_hm and the threshold are
+  # fixed-width zero-padded 4-digit strings, compared lexicographically with
+  # [[ x < y ]], NOT -lt/-le. Verified live (bash 3.2.57, this Mac): `[[
+  # "0815" -lt "0900" ]]` and `$(( 0815 ))` both abort with "value too great
+  # for base" (0815 isn't valid octal — real HHMM values hit this routinely,
+  # any HH or MM of 08/09/18/19/28/.../89); plain `[ -lt ]` happened not to on
+  # this build, but nothing here depends on that holding across bash
+  # versions. String comparison is correct for same-width zero-padded digits
+  # in any base and sidesteps the question entirely.
+  now_hm=$(date -u +%H%M)
+  if [[ "$now_hm" < "$DB_PUSH_AFTER_HHMM" ]]; then
+    return 0
+  fi
   local market_bak funding_bak ok=1
-  market_bak=$(ls -t "$HOME/RegimeData"/market.db.bak-liqtransport-* 2>/dev/null | head -1)
-  funding_bak=$(ls -t "$HOME/RegimeData/funding"/funding_intx.db.bak-fundingtopup-* 2>/dev/null | head -1)
+  # Sorted by filename (the embedded YYYYMMDD-HHMMSS), not mtime — mtime
+  # reflects whatever last touched the file (e.g. this rsync's own earlier
+  # attempt, or a restore); the timestamp the backup script itself wrote into
+  # the name is the only thing guaranteed to mean "when this backup is of."
+  market_bak=$(ls -1 "$HOME/RegimeData"/market.db.bak-liqtransport-* 2>/dev/null | sort | tail -1)
+  funding_bak=$(ls -1 "$HOME/RegimeData/funding"/funding_intx.db.bak-fundingtopup-* 2>/dev/null | sort | tail -1)
   if [ -n "$market_bak" ]; then
-    do_rsync "market.db" "$market_bak" "$LONDON_MIRROR/market.db" || ok=0
+    push_db_file "market.db" "$market_bak" "$LONDON_MIRROR/market.db" || ok=0
   else
     log "market.db SKIPPED no_backup_file_found"
     ok=0
   fi
   if [ -n "$funding_bak" ]; then
-    do_rsync "funding_intx.db" "$funding_bak" "$LONDON_MIRROR/funding/funding_intx.db" || ok=0
+    push_db_file "funding_intx.db" "$funding_bak" "$LONDON_MIRROR/funding/funding_intx.db" || ok=0
   else
     log "funding_intx.db SKIPPED no_backup_file_found"
     ok=0
