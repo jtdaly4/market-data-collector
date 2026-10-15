@@ -36,6 +36,12 @@ import time
 import urllib.request
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+# Default stays the git-tracked data/ dir (what GitHub Actions commits every
+# 15 min). Override only where a SECOND, local-only copy of this script also
+# runs against the same checkout (London's systemd timer) — two writers of
+# the tracked path collided the moment both touched the same UTC day, since
+# only the Actions side ever commits/pushes. ORDER 104 part 2 repair, 2026-10-15.
+DATA_DIR = os.environ.get("COLLECTOR_DATA_DIR") or os.path.join(BASE, "data")
 EXCHANGE = "https://api.exchange.coinbase.com"
 DERIBIT = "https://www.deribit.com/api/v2"
 
@@ -65,7 +71,7 @@ def load_universe():
 
 def append_rows(kind, fields, rows, day):
     """Append rows to data/<kind>/<day>.csv, skipping (ts, product_id) dupes."""
-    d = os.path.join(BASE, "data", kind)
+    d = os.path.join(DATA_DIR, kind)
     os.makedirs(d, exist_ok=True)
     path = os.path.join(d, f"{day}.csv")
     seen = set()
@@ -214,7 +220,8 @@ def main():
     for d, rows in by_day.items():
         n_c += append_rows("candles", CANDLE_FIELDS, rows, d)
     n_p = append_rows("perp", PERP_FIELDS, perp_rows, day)
-    with open(os.path.join(BASE, "data", "latest.json"), "w") as f:
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(os.path.join(DATA_DIR, "latest.json"), "w") as f:
         json.dump(latest, f, indent=1)
 
     print(f"collected: {n_c} candle rows, {n_p} perp rows "
