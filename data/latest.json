@@ -1,186 +1,186 @@
 {
- "generated_at": 1792119914,
+ "generated_at": 1792123513,
  "assets": {
   "BTC": {
-   "close": 81934.14,
-   "funding_rate": 1.6270428918868516e-05,
-   "open_interest": 1805.1101,
-   "basis": 0.0004094250450313519
+   "close": 82008.17,
+   "funding_rate": 1.3947002171102787e-05,
+   "open_interest": 1806.2012,
+   "basis": 0.00037951442417257257
   },
   "ETH": {
-   "close": 2436.07,
-   "funding_rate": 9.15906386133023e-06,
-   "open_interest": 25889.2732,
-   "basis": 0.000295245320156562
+   "close": 2436.81,
+   "funding_rate": 5.1263658145143e-06,
+   "open_interest": 25831.6697,
+   "basis": 0.0003245819466699386
   },
   "SOL": {
-   "close": 105.21,
-   "funding_rate": 1.7164367382209598e-07,
-   "open_interest": 268100.989,
-   "basis": 0.00022123053551088202
+   "close": 105.2,
+   "funding_rate": 1.733929607774999e-06,
+   "open_interest": 266696.402,
+   "basis": 0.00026278656589379546
   },
   "XRP": {
-   "close": 1.3329,
-   "funding_rate": 3.0122867903314394e-06,
-   "open_interest": 7888085.0,
-   "basis": 0.0003296398684437222
+   "close": 1.332,
+   "funding_rate": 1.3520110136050901e-05,
+   "open_interest": 7831629.0,
+   "basis": 0.00033088179999698895
   },
   "DOGE": {
-   "close": 0.08128,
-   "funding_rate": 1.4966117645176598e-06,
-   "open_interest": 22863611.0,
-   "basis": 0.00027006456998347994
+   "close": 0.08155,
+   "funding_rate": 1.5490251723305336e-06,
+   "open_interest": 22899402.0,
+   "basis": 0.0002211329377511287
   },
   "ADA": {
    "close": 0.22896,
-   "funding_rate": -7.350535731212799e-06,
-   "open_interest": 4730658.0,
-   "basis": -0.00030574361214233127
+   "funding_rate": -1.0579462343020543e-05,
+   "open_interest": 4702627.0,
+   "basis": -0.0003062653132657267
   },
   "AVAX": {
-   "close": 9.977,
+   "close": 10.053,
    "funding_rate": 0.0,
-   "open_interest": 281852.549,
-   "basis": 0.00010012014417312997
+   "open_interest": 281679.677,
+   "basis": 0.00010011012113319109
   },
   "LINK": {
-   "close": 12.441,
+   "close": 12.408,
    "funding_rate": 0.0,
-   "open_interest": 175294.3,
-   "basis": 0.00010449656768970331
+   "open_interest": 175255.04,
+   "basis": -3.226925466081526e-05
   },
   "DOT": {
-   "close": 1.17,
-   "funding_rate": 3.3669253964836315e-07,
-   "open_interest": 494818.9,
-   "basis": 8.561643835615497e-05
-  },
-  "LTC": {
-   "close": 60.903,
-   "funding_rate": -1.883932697265262e-07,
-   "open_interest": 16718.31,
-   "basis": -0.0001149255446649575
-  },
-  "BCH": {
-   "close": 278.32,
-   "funding_rate": 0.0,
-   "open_interest": 2022.312,
-   "basis": 0.00011511992258178826
-  },
-  "NEAR": {
-   "close": 5.2508,
-   "funding_rate": 3.502226314207295e-05,
-   "open_interest": 918264.9,
-   "basis": 0.000495209797535409
-  },
-  "ATOM": {
-   "close": 1.7282,
-   "funding_rate": -0.00011911539796287437,
-   "open_interest": 206420.5,
-   "basis": -0.0013873634314121959
-  },
-  "UNI": {
-   "close": 7.4358,
-   "funding_rate": 9.735990000301202e-08,
-   "open_interest": 237638.46,
-   "basis": 0.00023233483075137394
-  },
-  "APT": {
-   "close": 0.8388,
-   "funding_rate": 1.46140720814154e-07,
-   "open_interest": 253855.5,
-   "basis": 0.00011914690813772069
-  },
-  "ARB": {
-   "close": 0.1929,
-   "funding_rate": 0.0,
-   "open_interest": 2996285.60000011,
+   "close": 1.1517,
+   "funding_rate": -4.866233995455651e-07,
+   "open_interest": 514198.9,
    "basis": 0.0
   },
+  "LTC": {
+   "close": 61.01,
+   "funding_rate": -5.565554529434373e-06,
+   "open_interest": 16428.15,
+   "basis": -0.00024647540175479747
+  },
+  "BCH": {
+   "close": 276.34,
+   "funding_rate": 3.7415813856010754e-09,
+   "open_interest": 2024.215,
+   "basis": 8.341039728723172e-05
+  },
+  "NEAR": {
+   "close": 5.2298,
+   "funding_rate": 5.389832896255105e-05,
+   "open_interest": 936683.6,
+   "basis": 0.0008242600828093368
+  },
+  "ATOM": {
+   "close": 1.7328,
+   "funding_rate": -0.0001029512342448924,
+   "open_interest": 206996.9,
+   "basis": -0.0012740328932128676
+  },
+  "UNI": {
+   "close": 7.3828,
+   "funding_rate": 4.231127013869767e-07,
+   "open_interest": 236388.35,
+   "basis": 0.0001724554671098748
+  },
+  "APT": {
+   "close": 0.8445,
+   "funding_rate": 4.54953043548759e-08,
+   "open_interest": 250970.0,
+   "basis": 0.00011866619200188559
+  },
+  "ARB": {
+   "close": 0.19252,
+   "funding_rate": -2.9402724926299083e-07,
+   "open_interest": 2974949.60000011,
+   "basis": -0.00015637216575450742
+  },
   "OP": {
-   "close": 0.13679,
-   "funding_rate": -1.1208087040269432e-06,
-   "open_interest": 383399.1,
-   "basis": -0.00021872265966755793
+   "close": 0.1362,
+   "funding_rate": -1.269753318245161e-06,
+   "open_interest": 376740.9,
+   "basis": 0.00014705882352935475
   },
   "SUI": {
-   "close": 1.0303,
-   "funding_rate": -1.5012751790812284e-07,
-   "open_interest": 1403789.5,
-   "basis": -0.0001939111886757805
+   "close": 1.0302,
+   "funding_rate": -4.617667533711296e-07,
+   "open_interest": 1427181.4,
+   "basis": -9.735202492210767e-05
   },
   "INJ": {
-   "close": 9.121,
-   "funding_rate": 3.1548060456180974e-06,
-   "open_interest": 38507.5,
-   "basis": 0.0001323991835384516
+   "close": 9.242,
+   "funding_rate": 1.215509053208967e-05,
+   "open_interest": 37635.4,
+   "basis": 0.0006414437921287737
   },
   "AAVE": {
-   "close": 158.3,
-   "funding_rate": -2.2350857334482784e-06,
-   "open_interest": 3795.12,
-   "basis": -0.00018947767321418008
+   "close": 158.38,
+   "funding_rate": -1.1223499693553989e-06,
+   "open_interest": 3948.33,
+   "basis": -0.0001265342275086058
   },
   "ENA": {
-   "close": 0.20204,
-   "funding_rate": 1.0514951043239277e-06,
-   "open_interest": 4438015.0,
-   "basis": 9.875080235036786e-05
+   "close": 0.20328,
+   "funding_rate": 9.594927154006428e-07,
+   "open_interest": 4463410.0,
+   "basis": 0.0002474022761009129
   },
   "HBAR": {
-   "close": 0.08533,
-   "funding_rate": -1.2740115177989401e-05,
-   "open_interest": 6500838.0,
-   "basis": -0.0003513703443429638
+   "close": 0.08478,
+   "funding_rate": -1.1931654560244529e-05,
+   "open_interest": 6542744.0,
+   "basis": -0.00023632281696788664
   },
   "ONDO": {
-   "close": 0.4643,
-   "funding_rate": -5.4820106152502485e-06,
-   "open_interest": 1049617.0,
-   "basis": -0.00021486892995270518
+   "close": 0.4644,
+   "funding_rate": -3.857148224411427e-07,
+   "open_interest": 1057323.0,
+   "basis": -0.0002154708037060741
   },
   "PAXG": {
-   "close": 4172.36,
-   "funding_rate": 5.149543538277475e-07,
-   "open_interest": 2026.4892,
-   "basis": 0.0010225736471971075
+   "close": 4178.95,
+   "funding_rate": 7.13186434172505e-07,
+   "open_interest": 2031.0821,
+   "basis": 0.0010466725103469977
   },
   "PEPE": {
    "close": 4.08e-06,
-   "funding_rate": 2.7561744323599564e-06,
-   "open_interest": 47445125.0,
-   "basis": 0.00024479804161569956
+   "funding_rate": 6.069442044751427e-06,
+   "open_interest": 47998339.0,
+   "basis": 0.0002452783909737878
   },
   "SHIB": {
-   "close": 5.1e-06,
-   "funding_rate": -6.241942794000504e-06,
-   "open_interest": 9403000.0,
-   "basis": 0.0
+   "close": 5.11e-06,
+   "funding_rate": -9.94876242284681e-06,
+   "open_interest": 9402339.0,
+   "basis": -0.0003907776475186138
   },
   "XLM": {
-   "close": 0.181709,
-   "funding_rate": 1.586037869549729e-06,
-   "open_interest": 4597077.0,
-   "basis": 0.0002746799978025298
+   "close": 0.182197,
+   "funding_rate": 1.4181662202243192e-06,
+   "open_interest": 4596967.0,
+   "basis": 0.0001648261084555917
   },
   "ZEC": {
-   "close": 1216.82,
-   "funding_rate": 2.7496022679837853e-06,
-   "open_interest": 2873.473,
-   "basis": 0.000147843430361407
+   "close": 1208.36,
+   "funding_rate": 8.417674606947836e-07,
+   "open_interest": 2711.586,
+   "basis": 0.00034130889972899077
   },
   "BNB": {
-   "close": 727.14
+   "close": 728.28
   },
   "HYPE": {
-   "close": 81.15
+   "close": 80.82
   },
   "COIN50": {
-   "funding_rate": 0.00020075147244074233,
+   "funding_rate": 0.0002033568177426042,
    "open_interest": 1713.67,
-   "basis": 0.0021113667160369835
+   "basis": 0.0018621973929237505
   }
  },
  "perp_feed_source": "deribit",
- "perp_mark_age_s": 4.146
+ "perp_mark_age_s": 1.102
 }
